@@ -1,163 +1,183 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeedChat</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <link rel="icon" type="image/png" href="icom.png">
     <style>
-        /* 1. СТИЛЬ TG DARK */
+        /* 1. ДИЗАЙН TELEGRAM DARK */
         body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Экран входа */
         #auth-screen { position: fixed; width: 100%; height: 100%; background: #0e1621; z-index: 100; display: flex; justify-content: center; align-items: center; }
         .auth-card { background: #17212b; padding: 30px; border-radius: 10px; width: 320px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        input { width: 90%; padding: 12px; margin: 8px 0; border: none; border-radius: 5px; background: #242f3d; color: white; outline: none; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 5px; background: #5288c1; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .auth-card::before { content: ""; display: block; width: 80px; height: 80px; margin: 0 auto 15px; background: url('icom.png') no-repeat center/contain; }
 
-        /* Сайдбар */
         .sidebar { width: 300px; background: #17212b; border-right: 1px solid #080e15; display: flex; flex-direction: column; }
-        .search-area { padding: 15px; border-bottom: 1px solid #080e15; }
-        .chat-item { padding: 15px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #0e1621; }
+        .search-area { padding: 15px; border-bottom: 1px solid #080e15; text-align: center; }
+        
+        #contacts-list { flex: 1; overflow-y: auto; }
+        .chat-item { padding: 15px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #0e1621; display: flex; align-items: center; font-size: 14px; }
         .chat-item:hover { background: #242f3d; }
         .chat-item.active { background: #2b5278; }
 
-        /* Окрон чата */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: url('https://githubusercontent.com'); }
+        #chat-header { background: #17212b; padding: 15px; font-weight: bold; border-bottom: 1px solid #080e15; color: #5288c1; text-align: center; }
+        
         #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
         .msg { background: #182533; padding: 10px; border-radius: 12px; margin-bottom: 8px; max-width: 75%; align-self: flex-start; }
         .my-msg { align-self: flex-end; background: #2b5278; }
-        .input-area { background: #17212b; padding: 15px; display: flex; }
+
+        input { width: 90%; padding: 12px; margin: 8px 0; border: none; border-radius: 5px; background: #242f3d; color: white; outline: none; }
+        button { border: none; border-radius: 5px; background: #5288c1; color: white; font-weight: bold; cursor: pointer; padding: 10px; }
+        .input-area { background: #17212b; padding: 15px; display: flex; align-items: center; }
     </style>
 </head>
 <body>
 
-<!-- ЭКРАН ВХОДА -->
 <div id="auth-screen">
     <div class="auth-card">
-        <h2 style="color:#5288c1">SPEED CHAT</h2>
-        <input type="text" id="reg-id" placeholder="Твой @id (например: nikita)">
-        <input type="text" id="reg-phone" placeholder="Номер телефона">
+        <h2 style="color:#5288c1">SPEED CHAT v2.0</h2>
+        <input type="text" id="reg-id" placeholder="Твой @id">
         <input type="password" id="reg-pass" placeholder="Пароль">
-        <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
-        <p style="font-size:12px; color:#556779; margin-top:15px">Вводи @id для входа, если уже есть акк</p>
+        <button onclick="register()" style="width:100%">ВОЙТИ / РЕГА</button>
     </div>
 </div>
 
-<!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
 <div id="app" style="display:none; width: 100%; height: 100vh; display: flex;">
     <div class="sidebar">
         <div class="search-area">
-            <input type="text" id="searchInput" placeholder="Поиск @id или номера..." onkeyup="universalSearch()">
+            <input type="text" id="searchInput" placeholder="Поиск @id..." style="width: 85%;">
+            <div style="display:flex; justify-content: space-around; margin-top:5px;">
+                <button onclick="searchAndAdd()" style="width:45%; font-size:11px;">ПОИСК</button>
+                <button onclick="createGroup()" style="width:45%; font-size:11px; background:#2b5278;">ГРУППА</button>
+            </div>
         </div>
-        <div id="contacts-list">
-            <div class="chat-item active" onclick="switchChat('general', this)">🌎 Общий Чат</div>
-        </div>
+        <div id="contacts-list"></div>
     </div>
     <div class="main-chat">
+        <div id="chat-header">ВЫБЕРИТЕ ЧАТ</div>
         <div id="messages"></div>
         <div class="input-area">
-            <input type="text" id="msgInput" placeholder="Написать сообщение...">
-            <button onclick="sendMessage()" style="background:none; border:none; color:#5288c1; font-weight:bold; cursor:pointer;">ОТПРАВИТЬ</button>
+            <input type="text" id="msgInput" placeholder="Написать сообщение..." style="flex:1;">
+            <button onclick="sendMessage()" style="background:none; color:#5288c1; margin-left:10px;">ОТПРАВИТЬ</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- НАСТРОЙКИ FIREBASE (ВСТАВЬ СВОИ!) ---
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
-        databaseURL: "https://speedchat-3412e-default-rtdb.firebaseio.com/" 
+        databaseURL: "https://firebaseio.com" 
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const MASTER_KEY = "1qaz2wsx3edc4rfv5tgb_?!:"; 
-    let currentChat = 'general';
+    let currentChat = null;
+    let myId = "";
 
-    // 1. АВТО-ВХОД
+    // 1. АВТО-ВХОД И ГОРЯЧИЕ КЛАВИШИ
     window.onload = function() {
         const savedID = localStorage.getItem('ldf_active_id');
-        if (sessionStorage.getItem('logged') || savedID) {
-            loginSuccess(savedID || "Агент");
-        }
+        if (savedID) { myId = savedID; loginSuccess(); }
+
+        // Слушатель Enter для поиска
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchAndAdd();
+        });
+        // Слушатель Enter для сообщений
+        document.getElementById('msgInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
     };
 
-    // 2. РЕГИСТРАЦИЯ И ВХОД
     function register() {
-        const id = document.getElementById('reg-id').value.toLowerCase().replace('@', '');
-        const phone = document.getElementById('reg-phone').value.replace(/\D/g, '');
+        myId = document.getElementById('reg-id').value.toLowerCase().replace('@', '').trim();
         const pass = document.getElementById('reg-pass').value;
-
-        if (id && pass) {
-            db.ref('users/' + id).set({ phone: phone, pass: pass });
-            if (phone) db.ref('phones/' + phone).set(id);
-            
-            localStorage.setItem('ldf_active_id', id);
-            loginSuccess(id);
+        if (myId && pass) {
+            db.ref('users/' + myId + '/pass').set(pass);
+            localStorage.setItem('ldf_active_id', myId);
+            loginSuccess();
         }
     }
 
-    function loginSuccess(id) {
+    function loginSuccess() {
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
-        sessionStorage.setItem('logged', 'true');
-        loadMessages();
+        loadContacts();
     }
 
-    // 3. УНИВЕРСАЛЬНЫЙ ПОИСК (@ID ИЛИ НОМЕР)
-    function universalSearch() {
-        let query = document.getElementById('searchInput').value.trim().toLowerCase();
-        if (query.length < 3) return;
+    // 2. ПОИСК И ГРУППЫ
+    function searchAndAdd() {
+        let query = document.getElementById('searchInput').value.trim().toLowerCase().replace('@', '');
+        if (!query || query === myId) return;
+        
+        db.ref('users/' + query).once('value', s => {
+            if (s.exists()) {
+                db.ref('users/' + myId + '/contacts/' + query).set(true);
+                document.getElementById('searchInput').value = '';
+            } else { alert("Агент не найден!"); }
+        });
+    }
 
-        if (/^\d+$/.test(query)) { // Если цифры
-            db.ref('phones/' + query).once('value', s => {
-                if (s.exists()) showFound(s.val(), query);
-            });
-        } else if (query.startsWith('@')) { // Если @
-            const id = query.replace('@', '');
-            db.ref('users/' + id).once('value', s => {
-                if (s.exists()) showFound(id, "Найден агент");
-            });
+    function createGroup() {
+        const gName = prompt("Название секретной группы:");
+        if (gName) {
+            const gID = 'group_' + Date.now();
+            db.ref('chats/' + gID + '/metadata').set({ name: gName, creator: myId });
+            db.ref('users/' + myId + '/contacts/' + gID).set(true);
         }
     }
 
-    function showFound(id, info) {
-        const list = document.getElementById('contacts-list');
-        if (document.getElementById('f-'+id)) return;
-        const html = `<div id="f-${id}" class="chat-item" onclick="switchChat('private_${id}', this)" style="color:gold">👤 @${id} <br><small>${info}</small></div>`;
-        list.insertAdjacentHTML('afterbegin', html);
+    // 3. РАБОТА С КОНТАКТАМИ
+    function loadContacts() {
+        db.ref('users/' + myId + '/contacts').on('value', snapshot => {
+            document.getElementById('contacts-list').innerHTML = '';
+            snapshot.forEach(child => {
+                const id = child.key;
+                if (id.startsWith('group_')) {
+                    db.ref('chats/' + id + '/metadata/name').once('value', s => addUI(id, 'group', s.val()));
+                } else { addUI(id, 'private'); }
+            });
+        });
     }
 
-    // 4. ЧАТ И СООБЩЕНИЯ
-    function switchChat(chatId, el) {
+    function addUI(id, type, name = null) {
+        const displayName = name || '@' + id;
+        const html = `<div class="chat-item" onclick="switchChat('${id}', this, '${displayName}')">
+            ${type === 'group' ? '👥' : '👤'} ${displayName}</div>`;
+        document.getElementById('contacts-list').insertAdjacentHTML('afterbegin', html);
+    }
+
+    function switchChat(chatId, el, name) {
         currentChat = chatId;
-        if (el) {
-            document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
-            el.classList.add('active');
-        }
+        document.getElementById('chat-header').innerText = name;
+        document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
         document.getElementById('messages').innerHTML = '';
         loadMessages();
     }
 
+    // 4. СООБЩЕНИЯ
     function sendMessage() {
-        const text = document.getElementById('msgInput').value;
-        const myId = localStorage.getItem('ldf_active_id') || "Аноним";
-        if (text) {
-            db.ref('chats/' + currentChat).push({ user: myId, text: text, time: Date.now() });
-            document.getElementById('msgInput').value = '';
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        if (text && currentChat) {
+            db.ref('chats/' + currentChat + '/messages').push({ user: myId, text: text });
+            input.value = '';
         }
     }
 
     function loadMessages() {
-        db.ref('chats/' + currentChat).off();
-        db.ref('chats/' + currentChat).on('child_added', (s) => {
+        if (!currentChat) return;
+        const ref = db.ref('chats/' + currentChat + '/messages');
+        ref.off();
+        ref.on('child_added', (s) => {
             const d = s.val();
-            const isMy = d.user === localStorage.getItem('ldf_active_id');
             const mDiv = document.createElement('div');
-            mDiv.className = isMy ? 'msg my-msg' : 'msg';
+            mDiv.className = d.user === myId ? 'msg my-msg' : 'msg';
             mDiv.innerHTML = `<b style="color:#5288c1; font-size:10px">${d.user}</b><br>${d.text}`;
             document.getElementById('messages').appendChild(mDiv);
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
