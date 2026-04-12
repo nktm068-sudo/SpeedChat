@@ -3,103 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPEED CHAT | ЛДФЛДФ</title>
+    <title>SPEED MESSENGER | ЛДФЛДФ</title>
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
     <style>
-        /* 1. СТИЛЬ (TG DARK) */
-        body {
-            background-color: #0e1621;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .tg-container {
-            width: 350px;
-            background: #17212b;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            padding: 30px;
-            text-align: center;
-        }
-        h2 { color: #5288c1; margin-bottom: 20px; font-size: 20px; }
-        input {
-            width: 90%;
-            padding: 12px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 5px;
-            background: #242f3d;
-            color: white;
-            outline: none;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            background: #5288c1;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-        button:hover { background: #6399d1; }
+        /* 1. СТИЛЬ TG DARK */
+        body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Экран входа */
+        #auth-screen { position: fixed; width: 100%; height: 100%; background: #0e1621; z-index: 100; display: flex; justify-content: center; align-items: center; }
+        .auth-card { background: #17212b; padding: 30px; border-radius: 10px; width: 320px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        input { width: 90%; padding: 12px; margin: 8px 0; border: none; border-radius: 5px; background: #242f3d; color: white; outline: none; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 5px; background: #5288c1; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        /* Сайдбар */
+        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #080e15; display: flex; flex-direction: column; }
+        .search-area { padding: 15px; border-bottom: 1px solid #080e15; }
+        .chat-item { padding: 15px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #0e1621; }
+        .chat-item:hover { background: #242f3d; }
+        .chat-item.active { background: #2b5278; }
+
+        /* Окрон чата */
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: url('https://githubusercontent.com'); }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg { background: #182533; padding: 10px; border-radius: 12px; margin-bottom: 8px; max-width: 75%; align-self: flex-start; }
+        .my-msg { align-self: flex-end; background: #2b5278; }
+        .input-area { background: #17212b; padding: 15px; display: flex; }
     </style>
 </head>
 <body>
 
-    <div class="tg-container" id="auth-box">
-        <div id="reg-form">
-            <h2>РЕГИСТРАЦИЯ SPEED CHAT</h2>
-            <input type="text" id="reg-name" placeholder="Твое Имя">
-            <input type="email" id="reg-email" placeholder="Электронная почта">
-            <input type="tel" id="reg-phone" placeholder="Номер телефона">
-            <input type="password" id="reg-pass" placeholder="Придумай пароль">
-            <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+<!-- ЭКРАН ВХОДА -->
+<div id="auth-screen">
+    <div class="auth-card">
+        <h2 style="color:#5288c1">SPEED CHAT</h2>
+        <input type="text" id="reg-id" placeholder="Твой @id (например: nikita)">
+        <input type="text" id="reg-phone" placeholder="Номер телефона">
+        <input type="password" id="reg-pass" placeholder="Пароль">
+        <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+        <p style="font-size:12px; color:#556779; margin-top:15px">Вводи @id для входа, если уже есть акк</p>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+<div id="app" style="display:none; width: 100%; height: 100vh; display: flex;">
+    <div class="sidebar">
+        <div class="search-area">
+            <input type="text" id="searchInput" placeholder="Поиск @id или номера..." onkeyup="universalSearch()">
+        </div>
+        <div id="contacts-list">
+            <div class="chat-item active" onclick="switchChat('general', this)">🌎 Общий Чат</div>
         </div>
     </div>
-
-    <!-- ОКНО ЧАТА -->
-    <div id="chat-window" style="display:none; width: 100%; height: 100vh; background: #0e1621;">
-        <h3 id="welcome-user" style="text-align: center; color: #5288c1; padding-top: 20px;"></h3>
-        <iframe src="https://smartchatfree.com" width="100%" height="85%" frameborder="0"></iframe>
+    <div class="main-chat">
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Написать сообщение...">
+            <button onclick="sendMessage()" style="background:none; border:none; color:#5288c1; font-weight:bold; cursor:pointer;">ОТПРАВИТЬ</button>
+        </div>
     </div>
+</div>
 
-    <script>
-        /* 2. МОЗГИ (ЛДФЛДФ + АВТО-ВХОД) */
-        const MASTER_KEY = "1qaz2wsx3edc4rfv5tgb_?!:"; // Я ВСЁ ПОМНЮ! 🗝️
+<script>
+    // --- НАСТРОЙКИ FIREBASE (ВСТАВЬ СВОИ!) ---
+    const firebaseConfig = {
+        databaseURL: "https://speedchat-3412e-default-rtdb.firebaseio.com/" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        window.onload = function() {
-            const session = localStorage.getItem('ldf_active_session');
-            if (session) {
-                showChat(session);
-            }
-        };
+    const MASTER_KEY = "1qaz2wsx3edc4rfv5tgb_?!:"; 
+    let currentChat = 'general';
 
-        function register() {
-            const name = document.getElementById('reg-name').value;
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-pass').value;
-
-            if (name && pass) {
-                localStorage.setItem('user_name', name);
-                localStorage.setItem('user_pass', pass);
-                localStorage.setItem('ldf_active_session', name);
-                showChat(name);
-            } else {
-                alert("ЛДФЛДФ: Введи Имя и Пароль!");
-            }
+    // 1. АВТО-ВХОД
+    window.onload = function() {
+        const savedID = localStorage.getItem('ldf_active_id');
+        if (sessionStorage.getItem('logged') || savedID) {
+            loginSuccess(savedID || "Агент");
         }
+    };
 
-        function showChat(name) {
-            document.getElementById('auth-box').style.display = 'none';
-            document.getElementById('chat-window').style.display = 'block';
-            document.getElementById('welcome-user').innerText = "Агент " + name + " в сети";
+    // 2. РЕГИСТРАЦИЯ И ВХОД
+    function register() {
+        const id = document.getElementById('reg-id').value.toLowerCase().replace('@', '');
+        const phone = document.getElementById('reg-phone').value.replace(/\D/g, '');
+        const pass = document.getElementById('reg-pass').value;
+
+        if (id && pass) {
+            db.ref('users/' + id).set({ phone: phone, pass: pass });
+            if (phone) db.ref('phones/' + phone).set(id);
+            
+            localStorage.setItem('ldf_active_id', id);
+            loginSuccess(id);
         }
-    </script>
+    }
+
+    function loginSuccess(id) {
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        sessionStorage.setItem('logged', 'true');
+        loadMessages();
+    }
+
+    // 3. УНИВЕРСАЛЬНЫЙ ПОИСК (@ID ИЛИ НОМЕР)
+    function universalSearch() {
+        let query = document.getElementById('searchInput').value.trim().toLowerCase();
+        if (query.length < 3) return;
+
+        if (/^\d+$/.test(query)) { // Если цифры
+            db.ref('phones/' + query).once('value', s => {
+                if (s.exists()) showFound(s.val(), query);
+            });
+        } else if (query.startsWith('@')) { // Если @
+            const id = query.replace('@', '');
+            db.ref('users/' + id).once('value', s => {
+                if (s.exists()) showFound(id, "Найден агент");
+            });
+        }
+    }
+
+    function showFound(id, info) {
+        const list = document.getElementById('contacts-list');
+        if (document.getElementById('f-'+id)) return;
+        const html = `<div id="f-${id}" class="chat-item" onclick="switchChat('private_${id}', this)" style="color:gold">👤 @${id} <br><small>${info}</small></div>`;
+        list.insertAdjacentHTML('afterbegin', html);
+    }
+
+    // 4. ЧАТ И СООБЩЕНИЯ
+    function switchChat(chatId, el) {
+        currentChat = chatId;
+        if (el) {
+            document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+        }
+        document.getElementById('messages').innerHTML = '';
+        loadMessages();
+    }
+
+    function sendMessage() {
+        const text = document.getElementById('msgInput').value;
+        const myId = localStorage.getItem('ldf_active_id') || "Аноним";
+        if (text) {
+            db.ref('chats/' + currentChat).push({ user: myId, text: text, time: Date.now() });
+            document.getElementById('msgInput').value = '';
+        }
+    }
+
+    function loadMessages() {
+        db.ref('chats/' + currentChat).off();
+        db.ref('chats/' + currentChat).on('child_added', (s) => {
+            const d = s.val();
+            const isMy = d.user === localStorage.getItem('ldf_active_id');
+            const mDiv = document.createElement('div');
+            mDiv.className = isMy ? 'msg my-msg' : 'msg';
+            mDiv.innerHTML = `<b style="color:#5288c1; font-size:10px">${d.user}</b><br>${d.text}`;
+            document.getElementById('messages').appendChild(mDiv);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        });
+    }
+</script>
 </body>
 </html>
