@@ -1,21 +1,105 @@
-<div class="tg-container" id="auth-box">
-    <div id="reg-form">
-        <h2>РЕГИСТРАЦИЯ SPEED CHAT</h2>
-        <input type="text" id="reg-name" placeholder="Твое Имя">
-        <input type="email" id="reg-email" placeholder="Электронная почта">
-        <input type="tel" id="reg-phone" placeholder="Номер телефона (для контактов)">
-        <input type="password" id="reg-pass" placeholder="Придумай пароль">
-        <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
-    </div>
-    
-    <div id="login-form" style="display:none;">
-        <h2>ВХОД</h2>
-        <input type="email" id="login-email" placeholder="Почта">
-        <input type="password" id="login-pass" placeholder="Пароль">
-        <button onclick="login()">ВОЙТИ</button>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEED CHAT | ЛДФЛДФ</title>
+    <style>
+        /* 1. СТИЛЬ (TG DARK) */
+        body {
+            background-color: #0e1621;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .tg-container {
+            width: 350px;
+            background: #17212b;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 30px;
+            text-align: center;
+        }
+        h2 { color: #5288c1; margin-bottom: 20px; font-size: 20px; }
+        input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #242f3d;
+            color: white;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: #5288c1;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        button:hover { background: #6399d1; }
+    </style>
+</head>
+<body>
 
-<div id="chat-window" style="display:none; width: 100%; height: 100vh;">
-    <iframe src="https://smartchatfree.com" width="100%" height="100%" frameborder="0"></iframe>
-</div>
+    <div class="tg-container" id="auth-box">
+        <div id="reg-form">
+            <h2>РЕГИСТРАЦИЯ SPEED CHAT</h2>
+            <input type="text" id="reg-name" placeholder="Твое Имя">
+            <input type="email" id="reg-email" placeholder="Электронная почта">
+            <input type="tel" id="reg-phone" placeholder="Номер телефона">
+            <input type="password" id="reg-pass" placeholder="Придумай пароль">
+            <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+        </div>
+    </div>
+
+    <!-- ОКНО ЧАТА -->
+    <div id="chat-window" style="display:none; width: 100%; height: 100vh; background: #0e1621;">
+        <h3 id="welcome-user" style="text-align: center; color: #5288c1; padding-top: 20px;"></h3>
+        <iframe src="https://smartchatfree.com" width="100%" height="85%" frameborder="0"></iframe>
+    </div>
+
+    <script>
+        /* 2. МОЗГИ (ЛДФЛДФ + АВТО-ВХОД) */
+        const MASTER_KEY = "1qaz2wsx3edc4rfv5tgb_?!:"; // Я ВСЁ ПОМНЮ! 🗝️
+
+        window.onload = function() {
+            const session = localStorage.getItem('ldf_active_session');
+            if (session) {
+                showChat(session);
+            }
+        };
+
+        function register() {
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if (name && pass) {
+                localStorage.setItem('user_name', name);
+                localStorage.setItem('user_pass', pass);
+                localStorage.setItem('ldf_active_session', name);
+                showChat(name);
+            } else {
+                alert("ЛДФЛДФ: Введи Имя и Пароль!");
+            }
+        }
+
+        function showChat(name) {
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'block';
+            document.getElementById('welcome-user').innerText = "Агент " + name + " в сети";
+        }
+    </script>
+</body>
+</html>
