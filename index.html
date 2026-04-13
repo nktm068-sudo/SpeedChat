@@ -115,16 +115,22 @@
         }
     }
 
-    function loadContacts() {
-        db.ref('users/' + myId + '/contacts').on('value', snap => {
-            document.getElementById('contacts-list').innerHTML = '';
-            snap.forEach(c => {
-                const id = c.key;
-                const html = `<div class="chat-item" onclick="switchChat('${id}', this, '@${id}')">👤 @${id}</div>`;
-                document.getElementById('contacts-list').insertAdjacentHTML('afterbegin', html);
-            });
+   function loadContacts() {
+    db.ref('users/' + myId + '/contacts').on('value', snap => {
+        document.getElementById('contacts-list').innerHTML = '';
+        
+        // 1. СНАЧАЛА ВСЕГДА ВЫ (ЗАМЕТКИ)
+        addUI(myId, 'private', '@' + myId + ' (Вы)'); 
+
+        // 2. ПОТОМ ВСЕ ОСТАЛЬНЫЕ КОНТАКТЫ
+        snap.forEach(c => {
+            const id = c.key;
+            if (id !== myId) { // Пропускаем себя, чтобы не дублировать
+                addUI(id, 'private');
+            }
         });
-    }
+    });
+}
 
     function switchChat(id, el, name) {
         currentChat = id;
