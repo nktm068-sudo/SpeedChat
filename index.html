@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -147,19 +148,30 @@
         }
     }
 
-    function loadMessages() {
-        if(!currentChat) return;
-        const chatID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
-        db.ref('chats/' + chatID).off();
-        db.ref('chats/' + chatID).on('child_added', s => {
-            const d = s.val();
-            const m = document.createElement('div');
-            m.className = d.user === myId ? 'msg my-msg' : 'msg';
-            m.innerHTML = `<b style="color:#5288c1; font-size:10px">${d.user}</b><br>${d.text}`;
-            document.getElementById('messages').appendChild(m);
-            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-        });
-    }
+        function loadMessages() {
+    if (!currentChat) return;
+    const chatID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
+    const ref = db.ref('chats/' + chatID + '/messages');
+    ref.off();
+    ref.on('child_added', s => {
+        const d = s.val();
+
+        // --- МАГИЯ УВЕДОМЛЕНИЙ ЛДФЛДФ ---
+        if (d.user !== myId && document.hidden) {
+            new Notification("SpeedChat: " + d.user, { 
+                body: d.text, 
+                icon: "icom.png" 
+            });
+        }
+        // -------------------------------
+
+        const m = document.createElement('div');
+        m.className = d.user === myId ? 'msg my-msg' : 'msg';
+        m.innerHTML = `<b style="color:#5288c1; font-size:10px">${d.user}</b><br>${d.text}`;
+        document.getElementById('messages').appendChild(m);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    });
+}
 
     // СИСТЕМА ВОССТАНОВЛЕНИЯ (6 ЦИФР)
     function requestReset() {
