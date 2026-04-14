@@ -1,108 +1,165 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>SpeedChat | Быстро и надёжно</title
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SpeedChat | Быстро и надёжно</title>
+    <!-- ЛИЦО И МОЗГИ -->
     <link rel="icon" type="image/png" href="icom.png">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body { background: #0e1621; color: white; font-family: sans-serif; display: flex; height: 100vh; margin: 0; }
-        #auth { position: fixed; width: 100%; height: 100%; background: #0e1621; display: flex; justify-content: center; align-items: center; z-index: 10; }
-        .card { background: #17212b; padding: 30px; border-radius: 10px; text-align: center; }
-        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #080e15; }
-        .chat { flex: 1; display: flex; flex-direction: column; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; }
-        input { background: #242f3d; color: white; border: none; padding: 12px; border-radius: 5px; margin: 5px; }
-        button { background: #5288c1; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; }
+        body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        #auth { position: fixed; width: 100%; height: 100%; background: #0e1621; z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .auth-card { background: #17212b; padding: 25px; border-radius: 10px; width: 300px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #080e15; display: flex; flex-direction: column; flex-shrink: 0; }
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: #0e1621; position: relative; }
+        #chat-header { background: #17212b; padding: 15px; font-weight: bold; color: #5288c1; border-bottom: 1px solid #080e15; }
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg { background: #182533; padding: 10px; border-radius: 12px; margin-bottom: 8px; max-width: 80%; }
+        .my-msg { align-self: flex-end; background: #2b5278; }
+        input { width: 90%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; background: #242f3d; color: white; outline: none; }
+        button { border: none; border-radius: 8px; background: #5288c1; color: white; font-weight: bold; cursor: pointer; padding: 12px; margin-top: 10px; width: 100%; }
+        .chat-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #0e1621; display: flex; align-items: center; }
+        .chat-item:hover { background: #242f3d; }
     </style>
 </head>
-<body>
+<body id="app-body">
 
 <div id="auth">
-    <div class="card">
-        <h2>SpeedChat</h2>
-        <input type="text" id="myIdInput" placeholder="Твой @id">
-        <button onclick="login()">ВОЙТИ</button>
+    <div class="auth-card">
+        <img src="icom.png" width="70" style="margin-bottom:10px;">
+        <h2 style="color:#5288c1; margin:0;">SpeedChat</h2>
+        <p style="font-size:11px; color:#5288c1; margin-bottom:15px;">Быстро и надёжно</p>
+        <input type="text" id="reg-name" placeholder="Твоё Имя">
+        <input type="text" id="reg-id" placeholder="Твой @id">
+        <input type="tel" id="reg-phone" placeholder="Телефон">
+        <input type="password" id="reg-pass" placeholder="Пароль">
+        <button onclick="handleAuth()">ВОЙТИ / РЕГА</button>
     </div>
 </div>
 
-<div class="sidebar">
-    <div style="padding:20px;">
-        <input type="text" id="searchId" placeholder="Поиск @id" style="width:80%;">
-        <button onclick="addContact()">+</button>
+<div id="app-content" style="display:none; width: 100%; display: flex;">
+    <div class="sidebar">
+        <div style="padding: 15px; border-bottom: 1px solid #080e15;">
+            <input type="text" id="searchInput" placeholder="Поиск @id..." style="width:75%;">
+            <button onclick="addContact()" style="width:20%; margin:0; padding:10px;">+</button>
+        </div>
+        <div id="contacts-list"></div>
     </div>
-    <div id="contacts"></div>
-</div>
-
-<div class="chat">
-    <div id="messages"></div>
-    <div style="padding:20px; background:#17212b; display:flex;">
-        <input type="text" id="msg" style="flex:1;" placeholder="Сообщение...">
-        <button onclick="send()">📤</button>
+    <div class="main-chat">
+        <div id="chat-header"><span id="chat-title">ВЫБЕРИТЕ ЧАТ</span></div>
+        <div id="messages"></div>
+        <div style="background:#17212b; padding:15px; display:flex;">
+            <input type="text" id="msgInput" placeholder="Сообщение..." style="flex:1;">
+            <button onclick="sendMessage()" style="background:none; color:#5288c1; margin-left:10px; font-size:22px; width:auto; margin-top:0;">📤</button>
+        </div>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = { databaseURL: "https://firebaseio.com" };
+    const firebaseConfig = { databaseURL: "https://speedchat-3412e-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
+    let currentChat = null, myId = "", myName = "";
 
-    let myId = "";
-    let currentChat = "";
+    window.onload = () => {
+        const savedId = localStorage.getItem('ldf_active_id');
+        if (savedId) {
+            myId = savedId;
+            db.ref('users/' + myId + '/name').once('value', s => {
+                myName = s.val() || myId;
+                loginSuccess();
+            });
+        }
+    };
 
-    function login() {
-        myId = document.getElementById('myIdInput').value.trim().toLowerCase();
-        if(myId) {
-            document.getElementById('auth').style.display = 'none';
-            loadContacts();
+    async function handleAuth() {
+        const nI = document.getElementById('reg-name').value.trim();
+        const iI = document.getElementById('reg-id').value.toLowerCase().replace('@','').trim();
+        const ph = document.getElementById('reg-phone').value.trim();
+        const ps = document.getElementById('reg-pass').value;
+
+        if(!iI || !ps) return alert("Введите @id и пароль!");
+
+        const userRef = db.ref('users/' + iI);
+        const s = await userRef.once('value');
+
+        if (s.exists()) {
+            if (s.val().pass === ps) {
+                myId = iI; myName = s.val().name;
+                loginSuccess();
+            } else { alert("Неверный пароль!"); }
+        } else {
+            await userRef.set({ name: nI, pass: ps, phone: ph });
+            myId = iI; myName = nI;
+            loginSuccess();
         }
     }
 
+    function loginSuccess() {
+        localStorage.setItem('ldf_active_id', myId);
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('app-content').style.display = 'flex';
+        loadContacts();
+    }
+
     function addContact() {
-        let target = document.getElementById('searchId').value.trim().toLowerCase();
-        if(target) db.ref('users/' + myId + '/contacts/' + target).set(true);
+        let q = document.getElementById('searchInput').value.trim().toLowerCase().replace('@','');
+        if(q && q !== myId) {
+            db.ref('users/' + myId + '/contacts/' + q).set(true);
+            document.getElementById('searchInput').value = '';
+        }
     }
 
     function loadContacts() {
-        db.ref('users/' + myId + '/contacts').on('value', s => {
-            document.getElementById('contacts').innerHTML = '';
-            s.forEach(c => {
-                let id = c.key;
-                let btn = document.createElement('div');
-                btn.innerHTML = "👤 @" + id;
-                btn.style.padding = "15px";
-                btn.style.cursor = "pointer";
-                btn.onclick = () => startChat(id);
-                document.getElementById('contacts').appendChild(btn);
+        db.ref('users/' + myId + '/contacts').on('value', snap => {
+            const list = document.getElementById('contacts-list');
+            list.innerHTML = '';
+            addUI(myId, myName + ' (Заметки)');
+            snap.forEach(c => {
+                const id = c.key;
+                db.ref('users/' + id + '/name').once('value', s => {
+                    addUI(id, (s.val() || id) + ' (@' + id + ')');
+                });
             });
         });
     }
 
-    function startChat(id) {
-        currentChat = id;
-        document.getElementById('messages').innerHTML = '';
-        let chatID = myId < id ? myId + "_" + id : id + "_" + myId;
-        db.ref('chats/' + chatID).off();
-        db.ref('chats/' + chatID).on('child_added', s => {
-            let d = s.val();
-            let m = document.createElement('div');
-            m.innerText = d.user + ": " + d.text;
-            m.style.background = d.user === myId ? "#2b5278" : "#182533";
-            m.style.margin = "5px";
-            m.style.padding = "10px";
-            m.style.borderRadius = "10px";
-            document.getElementById('messages').appendChild(m);
-        });
+    function addUI(id, label) {
+        const div = document.createElement('div');
+        div.className = 'chat-item';
+        div.innerHTML = `<img src="icom.png" width="25" style="margin-right:10px;"> ${label}`;
+        div.onclick = () => {
+            currentChat = id;
+            document.getElementById('chat-title').innerText = label;
+            document.getElementById('messages').innerHTML = '';
+            loadMessages();
+        };
+        document.getElementById('contacts-list').appendChild(div);
     }
 
-    function send() {
-        let t = document.getElementById('msg').value;
-        if(t && currentChat) {
-            let chatID = myId < currentChat ? myId + "_" + currentChat : currentChat + "_" + myId;
-            db.ref('chats/' + chatID).push({ user: myId, text: t });
-            document.getElementById('msg').value = '';
+    function sendMessage() {
+        const i = document.getElementById('msgInput');
+        if(i.value.trim() && currentChat) {
+            const cID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
+            db.ref('chats/' + cID).push({ user: myId, text: i.value.trim() });
+            i.value = '';
         }
+    }
+
+    function loadMessages() {
+        const cID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
+        db.ref('chats/' + cID).off();
+        db.ref('chats/' + cID).on('child_added', s => {
+            const d = s.val();
+            const m = document.createElement('div');
+            m.className = d.user === myId ? 'msg my-msg' : 'msg';
+            m.innerText = d.text;
+            document.getElementById('messages').appendChild(m);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        });
     }
 </script>
 </body>
