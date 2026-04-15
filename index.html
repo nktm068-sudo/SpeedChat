@@ -161,6 +161,34 @@
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         });
     }
+    // Функция, когда бот лезет в Firebase "думать"
+function askCloudBot(userMsg, chatId) {
+    console.log("ST-Bot: Ухожу в облако за ответом...");
+    
+    const msg = userMsg.toLowerCase();
+    
+    // Лезем в папку с мозгами бота
+    db.ref('bot_brain').once('value').then((snapshot) => {
+        const brain = snapshot.val();
+        let response = "Интересно... Записал это в лог для обучения! 🧠";
+
+        // Ищем ответ в облаке
+        for (let key in brain) {
+            if (msg.includes(key)) {
+                response = brain[key];
+                break;
+            }
+        }
+
+        // Отправляем ответ в чат
+        db.ref('messages/' + chatId).push({
+            sender: "ST_BOT",
+            text: response,
+            timestamp: Date.now()
+        });
+    });
+}
+
 </script>
 </body>
 </html>
