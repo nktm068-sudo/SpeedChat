@@ -108,7 +108,7 @@
 
     function addContact() {
         let q = document.getElementById('searchInput').value.trim().toLowerCase().replace('@','');
-        if(q && q !== myId) {
+        if(q && q !== myId && q !== 'mirtex') {
             db.ref('users/' + myId + '/contacts/' + q).set(true);
             document.getElementById('searchInput').value = '';
         }
@@ -118,7 +118,13 @@
         db.ref('users/' + myId + '/contacts').on('value', snap => {
             const list = document.getElementById('contacts-list');
             list.innerHTML = '';
+            
+            // Твои личные заметки
             addUI(myId, myName + ' (Заметки)');
+            
+            // 🔥 НАШ ДРУГ МИРТЕКС: всегда встроен в мессенджер!
+            addUI('mirtex', '🤖 Миртекс ИИ (@mirtex)');
+            
             snap.forEach(c => {
                 const id = c.key;
                 db.ref('users/' + id + '/name').once('value', s => {
@@ -143,10 +149,17 @@
 
     function sendMessage() {
         const i = document.getElementById('msgInput');
-        if(i.value.trim() && currentChat) {
+        const textVal = i.value.trim();
+        if(textVal && currentChat) {
             const cID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
-            db.ref('chats/' + cID).push({ user: myId, text: i.value.trim() });
+            
+            db.ref('chats/' + cID).push({ user: myId, text: textVal });
             i.value = '';
+
+            // 🔥 Перехватываем сообщение, если пишем Миртексу
+            if (currentChat === 'mirtex') {
+                triggerMirtexAI(textVal, cID);
+            }
         }
     }
 
@@ -162,34 +175,67 @@
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         });
     }
-    // Функция, когда бот лезет в Firebase "думать"
-function askCloudBot(userMsg, chatId) {
-    console.log("ST-Bot: Ухожу в облако за ответом...");
-    
-    const msg = userMsg.toLowerCase();
-    
-    // Лезем в папку с мозгами бота
-    db.ref('bot_brain').once('value').then((snapshot) => {
-        const brain = snapshot.val();
-        let response = "Интересно... Записал это в лог для обучения! 🧠";
 
-        // Ищем ответ в облаке
-        for (let key in brain) {
-            if (msg.includes(key)) {
-                response = brain[key];
-                break;
+    // 🔥 МОЗГИ РОБОТА МИРТЕКСА ВНУТРИ МЕССЕНДЖЕРА
+    async function triggerMirtexAI(userMsg, cID) {
+        const text = userMsg.toLowerCase().trim();
+        
+        if (!window.chatHistory) { window.chatHistory = []; }
+        window.chatHistory.push(text);
+
+        // Небольшая задержка, как будто бот печатает ответ
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        let helloCount = window.chatHistory.filter(t => 
+            ["привет", "хай", "ку", "салам", "здарова", "йо", "приветик"].some(word => t.includes(word))
+        ).length;
+        
+        let isHello = ["привет", "хай", "ку", "салам", "здарова", "йо", "здор"].some(word => text.includes(word));
+        let isStatus = ["как дела", "как жизнь", "че как", "как ты", "че там", "как оно", "настроение", "как сам"].some(word => text.includes(word));
+        let aiResult = "";
+
+        if (isStatus) {
+            aiResult = randomAnswer([
+                "Да вообще отлично, сервера SpeedChat кайфуют! Как твои успехи? 🚀",
+                "Все чики-пуки, сижу на чилле, играю в Майнкрафт. Сам как? 😎",
+                "Настроение пушка! Готов разносить этот день в пух и прах. Что нового? 🔥",
+                "Все путем, код крутится, уровень в играх качается! Как сам поживаешь?",
+                "Полный порядок, пиксели в чате греются от радости. Рассказывай!"
+            ]);
+        } else if (isHello) {
+            if (helloCount > 1) {
+                aiResult = randomAnswer([
+                    "Да мы ж уже перетирали в мессенджере за это, здоровались! 😂",
+                    "Память отшибло? Привет еще раз! 👋",
+                    "Йоу, у тебя пластинку в чате заело? Здаров!",
+                    "Два раза не повторяю в ЛС, но приветик!"
+                ]);
+            } else {
+                aiResult = randomAnswer([
+                    "Йоу! На связи в SpeedChat. Че кого, как сам? 😎",
+                    "Привет-привет! Какие новости, во что рубишься на каникулах?",
+                    "Ку! Рад видеть тебя в моих контактах. Что мутим?",
+                    "Здарова! Я тут как раз чилл ловил в базе данных. Че хотел?",
+                    "Приветик! Гоу общаться, мой чат-поток заряжен на полную!"
+                ]);
             }
+        } else {
+            aiResult = randomAnswer([
+                "Реально базаришь в чате. Расскажи подробнее! 🔥",
+                "Четко сказано в ЛС. Я прям проникся.",
+                "Жиза! У меня микросхемы мессенджера от такого плавятся.",
+                "Тема годная, одобряю полностью твой месседж. Что дальше?",
+                "Хм, ну тут сыглы, спорить не буду. И че думаешь делать?"
+            ]);
         }
 
-        // Отправляем ответ в чат
-        db.ref('messages/' + chatId).push({
-            sender: "ST_BOT",
-            text: response,
-            timestamp: Date.now()
-        });
-    });
-}
+        // Загружаем ответ Миртекса в Firebase ветку этого чата
+        db.ref('chats/' + cID).push({ user: 'mirtex', text: aiResult });
+    }
 
+    function randomAnswer(array) {
+        return array[Math.floor(Math.random() * array.length)];
+    }
 </script>
 </body>
 </html>
