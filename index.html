@@ -3,69 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="yandex-verification" content="cfccdeee6db42126" />
+    <meta name="theme-color" content="#0e1621">
     <title>SpeedChat | Быстро и надёжно</title>
-    <!-- ЛИЦО И МОЗГИ -->
     <link rel="icon" type="image/png" href="icom.png">
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        #auth { position: fixed; width: 100%; height: 100%; background: #0e1621; z-index: 1000; display: flex; justify-content: center; align-items: center; }
-        .auth-card { background: #17212b; padding: 25px; border-radius: 10px; width: 300px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #080e15; display: flex; flex-direction: column; flex-shrink: 0; }
-        .main-chat { flex: 1; display: flex; flex-direction: column; background: #0e1621; position: relative; }
-        #chat-header { background: #17212b; padding: 15px; font-weight: bold; color: #5288c1; border-bottom: 1px solid #080e15; }
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
-        .msg { background: #182533; padding: 10px; border-radius: 12px; margin-bottom: 8px; max-width: 80%; }
-        .my-msg { align-self: flex-end; background: #2b5278; }
-        input { width: 90%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; background: #242f3d; color: white; outline: none; }
-        button { border: none; border-radius: 8px; background: #5288c1; color: white; font-weight: bold; cursor: pointer; padding: 12px; margin-top: 10px; width: 100%; }
-        .chat-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #0e1621; display: flex; align-items: center; }
-        .chat-item:hover { background: #242f3d; }
+        :root {
+            --bg: #0e1621;
+            --sidebar: #17212b;
+            --text: #ffffff;
+            --accent: #5288c1;
+            --nexus-purple: #9d4edd;
+            --nexus-dark: #1a0b2e;
+            --menu-bg: #242f3d;
+            --danger: #ff4444;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
+        
+        /* Auth & Loading */
+        #auth, #loading-modal { position: fixed; width: 100%; height: 100%; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .auth-card, .modal-content { background: var(--sidebar); padding: 25px; border-radius: 16px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+        input { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; background: #242f3d; color: white; font-size: 16px; outline: none; }
+        button { border: none; border-radius: 10px; background: var(--accent); color: white; font-weight: bold; cursor: pointer; padding: 14px; margin-top: 10px; width: 100%; font-size: 16px; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
+
+        /* Layout */
+        .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid #080e15; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s; z-index: 50; }
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; width: 100%; }
+        
+        /* Header */
+        #chat-header { background: var(--sidebar); padding: 15px; font-weight: bold; color: var(--accent); border-bottom: 1px solid #080e15; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .menu-btn { display: none; font-size: 24px; cursor: pointer; padding: 5px; }
+        
+        /* Messages */
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+        .msg { padding: 10px 14px; border-radius: 16px; max-width: 80%; word-wrap: break-word; line-height: 1.4; font-size: 15px; position: relative; animation: popIn 0.2s ease; }
+        @keyframes popIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .my-msg { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .nexus-msg { align-self: flex-start; background: var(--nexus-dark); color: #e0d4ff; border: 1px solid var(--nexus-purple); border-bottom-left-radius: 4px; }
+        .other-msg { align-self: flex-start; background: #242f3d; color: #ddd; border-bottom-left-radius: 4px; }
+        
+        .bot-name { font-size: 9px; font-weight: bold; display: block; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--nexus-purple); opacity: 0.8; }
+        .msg-time { font-size: 10px; opacity: 0.6; float: right; margin-left: 8px; margin-top: 4px; }
+
+        .system-nexus-active { align-self: center; background: var(--nexus-dark); color: var(--nexus-purple); border: 1px solid var(--nexus-purple); font-size: 11px; text-align: center; max-width: 90%; padding: 8px; border-radius: 8px; margin: 10px 0; }
+
+        /* Context Menu (Long Press) */
+        #context-menu {
+            position: absolute;
+            background: var(--menu-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 2000;
+            min-width: 150px;
+        }
+        .ctx-item {
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ctx-item:active { background: rgba(255,255,255,0.1); }
+        .ctx-danger { color: var(--danger); }
+
+        /* Forward Modal */
+        #forward-modal {
+            position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; display:none; justify-content:center; align-items:center;
+        }
+        .forward-list { background: var(--sidebar); width: 90%; max-width: 400px; border-radius: 12px; max-height: 70vh; overflow-y: auto; }
+        .forward-item { padding: 15px; border-bottom: 1px solid #080e15; cursor: pointer; color: white; }
+        .forward-item:hover { background: #242f3d; }
+
+        /* Mobile Adaptation */
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; height: 100%; transform: translateX(-100%); width: 85%; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+            .sidebar.open { transform: translateX(0); }
+            .menu-btn { display: block; }
+            .msg { max-width: 85%; font-size: 16px; }
+        }
     </style>
 </head>
-<body id="app-body">
+<body>
 
-<div id="auth">
-    <div class="auth-card">
-        <img src="icom.png" width="70" style="margin-bottom:10px;">
-        <h2 style="color:#5288c1; margin:0;">SpeedChat</h2>
-        <p style="font-size:11px; color:#5288c1; margin-bottom:15px;">Быстро и надёжно</p>
-        <input type="text" id="reg-name" placeholder="Твоё Имя">
-        <input type="text" id="reg-id" placeholder="Твой @id">
-        <input type="tel" id="reg-phone" placeholder="Телефон">
-        <input type="password" id="reg-pass" placeholder="Пароль">
-        <button onclick="handleAuth()">ВОЙТИ / РЕГА</button>
+<!-- Loading / Geo Check -->
+<div id="loading-modal">
+    <div class="modal-content">
+        <h3 id="load-title">Проверка...</h3>
+        <p id="load-text" style="color:#aaa;">Определяем регион...</p>
+        <div style="margin-top:15px; font-size:24px;">⏳</div>
     </div>
 </div>
 
+<!-- Auth Screen -->
+<div id="auth">
+    <div class="auth-card">
+        <img src="icom.png" width="70" style="margin-bottom:15px;">
+        <h2 style="color:var(--accent); margin:0;">SpeedChat</h2>
+        <p id="auth-subtitle" style="font-size:12px; color:var(--accent); margin-bottom:20px;">Быстро и надёжно</p>
+        <input type="text" id="reg-name" placeholder="Имя">
+        <input type="text" id="reg-id" placeholder="@id">
+        <input type="tel" id="reg-phone" placeholder="Телефон">
+        <input type="password" id="reg-pass" placeholder="Пароль">
+        <button onclick="handleAuth()" id="btn-login">ВОЙТИ</button>
+    </div>
+</div>
+
+<!-- Main App -->
 <div id="app-content" style="display:none; width: 100%; display: flex;">
-    <div class="sidebar">
-        <div style="padding: 15px; border-bottom: 1px solid #080e15;">
-            <input type="text" id="searchInput" placeholder="Поиск @id..." style="width:75%;">
-            <button onclick="addContact()" style="width:20%; margin:0; padding:10px;">+</button>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div style="padding: 20px; border-bottom: 1px solid #080e15; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold; color:#fff;" id="lbl-chats">ЧАТЫ</span>
+            <span onclick="toggleSidebar()" style="font-size:20px; cursor:pointer;">✕</span>
         </div>
-        <div id="contacts-list"></div>
+        <div style="padding: 10px 15px;">
+            <input type="text" id="searchInput" placeholder="Поиск..." style="width:100%; margin:0; font-size:14px; padding:10px;">
+        </div>
+        <div id="contacts-list" style="overflow-y:auto; flex:1;"></div>
+        <div style="padding:15px; font-size:11px; color:#555; text-align:center;" id="lbl-footer">SpeedChat v7.0 [NEXUS Core]</div>
     </div>
+    
+    <!-- Chat Area -->
     <div class="main-chat">
-        <div id="chat-header"><span id="chat-title">ВЫБЕРИТЕ ЧАТ</span></div>
+        <div id="chat-header">
+            <span class="menu-btn" onclick="toggleSidebar()"></span>
+            <span id="chat-title" style="flex:1; text-align:center; padding-right:40px;">Выберите чат</span>
+            <span id="typing-indicator" class="typing" style="font-size:12px; color:#888; font-style:italic;">печатает...</span>
+        </div>
         <div id="messages"></div>
-        <div style="background:#17212b; padding:15px; display:flex;">
-            <input type="text" id="msgInput" placeholder="Сообщение..." style="flex:1;">
-            <button onclick="sendMessage()" style="background:none; color:#5288c1; margin-left:10px; font-size:22px; width:auto; margin-top:0;">📤</button>
+        
+        <!-- Input Area -->
+        <div style="background:var(--sidebar); padding:10px; display:flex; align-items:center; border-top:1px solid #080e15;">
+            <input type="text" id="msgInput" placeholder="Сообщение..." style="flex:1; margin:0; border-radius:20px; padding-left:15px;">
+            <button onclick="sendMessage()" style="background:none; color:var(--accent); margin:0 0 0 10px; width:auto; padding:10px; font-size:20px;">➤</button>
         </div>
     </div>
+</div>
+
+<!-- Context Menu (Hidden by default) -->
+<div id="context-menu">
+    <div class="ctx-item" onclick="forwardMessage()">➡️ Переслать</div>
+    <div class="ctx-item ctx-danger" onclick="deleteMessage()">🗑️ Удалить</div>
+</div>
+
+<!-- Forward Modal -->
+<div id="forward-modal">
+    <div class="forward-list" id="forward-list-content">
+        <!-- Contacts will be injected here -->
+    </div>
+    <button onclick="closeForwardModal()" style="position:absolute; bottom:20px; width:200px; background:#333;">Отмена</button>
 </div>
 
 <script>
+    // Firebase Config
     const firebaseConfig = { databaseURL: "https://speedchat-3412e-default-rtdb.firebaseio.com/" };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-    let currentChat = null, myId = "", myName = "";
+    let myId = "", myName = "", currentChat = null;
+    let isRussia = false;
+    let lang = "ru";
+    let selectedMsgKey = null; // Для контекстного меню
+    let selectedMsgText = "";
+
+    const texts = {
+        ru: { load: "Проверка...", detect: "Регион...", login: "ВОЙТИ", chats: "ЧАТЫ", search: "Поиск...", typing: "думает...", select: "Выберите чат", nexus_active: "🧠 NEXUS AI", notes: "(Заметки)", nexus_welcome: "✅ NEXUS ONLINE. Полная память активна.", global_hidden: "Недоступно." },
+        en: { load: "Checking...", detect: "Region...", login: "LOGIN", chats: "CHATS", search: "Search...", typing: "thinking...", select: "Select Chat", nexus_active: "🧠 NEXUS AI", notes: "(Notes)", nexus_welcome: "✅ NEXUS ONLINE. Full memory active.", global_hidden: "Unavailable." }
+    };
 
     window.onload = () => {
+        fetch('https://ipapi.co/json/')
+            .then(res => res.json())
+            .then(data => {
+                if (data.country_code === 'RU') { isRussia = true; lang = 'ru'; } 
+                else { isRussia = false; lang = 'en'; }
+                applyLanguage();
+                setTimeout(() => {
+                    document.getElementById('loading-modal').style.display = 'none';
+                    checkAuth();
+                }, 800);
+            })
+            .catch(err => {
+                console.error("Geo error", err);
+                isRussia = false; lang = 'en';
+                applyLanguage();
+                document.getElementById('loading-modal').style.display = 'none';
+                checkAuth();
+            });
+    };
+
+    function applyLanguage() {
+        const t = texts[lang];
+        document.getElementById('load-title').innerText = t.load;
+        document.getElementById('load-text').innerText = t.detect;
+        document.getElementById('btn-login').innerText = t.login;
+        document.getElementById('lbl-chats').innerText = t.chats;
+        document.getElementById('searchInput').placeholder = t.search;
+        document.getElementById('typing-indicator').innerText = t.typing;
+        document.getElementById('chat-title').innerText = t.select;
+        document.getElementById('auth-subtitle').innerText = isRussia ? "Быстро и надёжно" : t.global_hidden;
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    function checkAuth() {
         const savedId = localStorage.getItem('ldf_active_id');
         if (savedId) {
             myId = savedId;
@@ -73,27 +226,24 @@
                 myName = s.val() || myId;
                 loginSuccess();
             });
+        } else {
+            document.getElementById('auth').style.display = 'flex';
         }
-    };
+    }
 
     async function handleAuth() {
         const nI = document.getElementById('reg-name').value.trim();
         const iI = document.getElementById('reg-id').value.toLowerCase().replace('@','').trim();
-        const ph = document.getElementById('reg-phone').value.trim();
         const ps = document.getElementById('reg-pass').value;
-
-        if(!iI || !ps) return alert("Введите @id и пароль!");
+        if(!iI || !ps) return alert(lang === 'ru' ? "Заполните поля!" : "Fill fields!");
 
         const userRef = db.ref('users/' + iI);
         const s = await userRef.once('value');
-
         if (s.exists()) {
-            if (s.val().pass === ps) {
-                myId = iI; myName = s.val().name;
-                loginSuccess();
-            } else { alert("Неверный пароль!"); }
+            if (s.val().pass === ps) { myId = iI; myName = s.val().name; loginSuccess(); }
+            else alert(lang === 'ru' ? "Неверный пароль!" : "Wrong password!");
         } else {
-            await userRef.set({ name: nI, pass: ps, phone: ph });
+            await userRef.set({ name: nI, pass: ps, phone: "" });
             myId = iI; myName = nI;
             loginSuccess();
         }
@@ -106,197 +256,303 @@
         loadContacts();
     }
 
-    function addContact() {
-        let q = document.getElementById('searchInput').value.trim().toLowerCase().replace('@','');
-        if(q && q !== myId && q !== 'mirtex') {
-            db.ref('users/' + myId + '/contacts/' + q).set(true);
-            document.getElementById('searchInput').value = '';
-        }
-    }
-
-    function loadContacts() {
-        db.ref('users/' + myId + '/contacts').on('value', snap => {
-            const list = document.getElementById('contacts-list');
-            list.innerHTML = '';
-            
-            // Твои личные заметки
-            addUI(myId, myName + ' (Заметки)');
-            
-            // 🔥 НАШ ДРУГ МИРТЕКС: всегда встроен в мессенджер!
-            addUI('mirtex', '🤖 Миртекс ИИ (@mirtex)');
-            
-            snap.forEach(c => {
-                const id = c.key;
-                db.ref('users/' + id + '/name').once('value', s => {
-                    addUI(id, (s.val() || id) + ' (@' + id + ')');
-                });
-            });
-        });
-    }
-
-    function addUI(id, label) {
+    function addContact(id, name, icon, isSpecial = false) {
+        const t = texts[lang];
         const div = document.createElement('div');
         div.className = 'chat-item';
-        div.innerHTML = `<img src="icom.png" width="25" style="margin-right:10px;"> ${label}`;
+        let statusText = isSpecial ? (lang==='ru'?'Онлайн • AI':'Online • AI') : t.select;
+        let displayName = name;
+        if(id === 'nexus_ai') displayName = t.nexus_active;
+        if(id === myId) displayName = myName + " " + t.notes;
+
+        div.innerHTML = `<span style="font-size:24px; margin-right:15px;">${icon}</span> 
+                         <div><div style="font-weight:bold; color:#fff">${displayName}</div>
+                         <div style="font-size:11px; color:#666">${statusText}</div></div>`;
+        
         div.onclick = () => {
+            if(window.innerWidth <= 768) toggleSidebar(); // Закрыть меню на мобильном
+            document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
+            div.classList.add('active');
             currentChat = id;
-            document.getElementById('chat-title').innerText = label;
+            document.getElementById('chat-title').innerText = displayName;
             document.getElementById('messages').innerHTML = '';
             loadMessages();
         };
         document.getElementById('contacts-list').appendChild(div);
     }
 
-    function sendMessage() {
-        const i = document.getElementById('msgInput');
-        const textVal = i.value.trim();
-        if(textVal && currentChat) {
-            const cID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
+    function loadContacts() {
+        db.ref('users/' + myId + '/contacts').on('value', snap => {
+            const list = document.getElementById('contacts-list');
+            list.innerHTML = '';
+            addContact(myId, myName, "");
+            if (isRussia) addContact('nexus_ai', "NEXUS", "🧠", true);
             
-            db.ref('chats/' + cID).push({ user: myId, text: textVal });
-            i.value = '';
-
-            // 🔥 Перехватываем сообщение, если пишем Миртексу
-            if (currentChat === 'mirtex') {
-                triggerMirtexAI(textVal, cID);
+            if(snap.exists()) {
+                snap.forEach(c => {
+                    const id = c.key;
+                    if(id !== 'nexus_ai' && id !== myId) {
+                        db.ref('users/' + id + '/name').once('value', s => {
+                            addContact(id, s.val() || id, "👤");
+                        });
+                    }
+                });
             }
+        });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        if(text && currentChat) {
+            const chatId = myId < currentChat ? `${myId}_${currentChat}` : `${currentChat}_${myId}`;
+            db.ref('chats/' + chatId).push({ user: myId, text: text, timestamp: Date.now() });
+            input.value = '';
+            if (currentChat === 'nexus_ai' && isRussia) triggerNexusCore(text, chatId);
         }
     }
 
     function loadMessages() {
-        const cID = myId < currentChat ? myId+'_'+currentChat : currentChat+'_'+myId;
-        db.ref('chats/' + cID).off();
-        db.ref('chats/' + cID).on('child_added', s => {
-            const d = s.val();
-            const m = document.createElement('div');
-            m.className = d.user === myId ? 'msg my-msg' : 'msg';
-            m.innerText = d.text;
-            document.getElementById('messages').appendChild(m);
+        const t = texts[lang];
+        const chatId = myId < currentChat ? `${myId}_${currentChat}` : `${currentChat}_${myId}`;
+        db.ref('chats/' + chatId).off();
+        
+        if(currentChat === 'nexus_ai' && isRussia) {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'msg system-nexus-active';
+            welcomeDiv.innerHTML = `<b>🧠 NEXUS CORE</b><br>${t.nexus_welcome}<br>Память: Безгранична.`;
+            document.getElementById('messages').appendChild(welcomeDiv);
+        }
+
+        db.ref('chats/' + chatId).orderByChild('timestamp').on('child_added', snapshot => {
+            const data = snapshot.val();
+            const msgKey = snapshot.key;
+            const msgDiv = document.createElement('div');
+            
+            let className = 'other-msg';
+            if (data.user === myId) className = 'my-msg';
+            else if (data.user === 'nexus_ai') className = 'nexus-msg';
+            
+            msgDiv.className = `msg ${className}`;
+            
+            let contentHtml = data.text.replace(/\n/g, '<br>');
+            if (className === 'nexus-msg') {
+                contentHtml = `<span class="bot-name">NEXUS AI</span>` + contentHtml;
+            }
+            
+            contentHtml += `<span class="msg-time">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+            msgDiv.innerHTML = contentHtml;
+
+            // Long Press Logic (Mobile & Desktop)
+            let pressTimer;
+            const startPress = (e) => {
+                e.preventDefault(); // Prevent text selection
+                pressTimer = setTimeout(() => {
+                    showContextMenu(e, msgKey, data.text, data.user);
+                }, 600); // 600ms for long press
+            };
+            const endPress = () => clearTimeout(pressTimer);
+
+            msgDiv.addEventListener('mousedown', startPress);
+            msgDiv.addEventListener('touchstart', startPress);
+            msgDiv.addEventListener('mouseup', endPress);
+            msgDiv.addEventListener('touchend', endPress);
+            msgDiv.addEventListener('mouseleave', endPress);
+
+            document.getElementById('messages').appendChild(msgDiv);
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         });
     }
 
-        // 🔥 ПОЛНАЯ ОБНОВЛЕННАЯ ФУНКЦИЯ МИРТЕКСА СО ВСЕМИ ПРИКОЛЮХАМИ
-    async function triggerMirtexAI(userMsg, cID) {
-        const text = userMsg.toLowerCase().trim();
+    // --- CONTEXT MENU LOGIC ---
+    function showContextMenu(e, key, text, user) {
+        // Скрываем старое меню
+        const menu = document.getElementById('context-menu');
+        menu.style.display = 'flex';
         
-        if (!window.chatHistory) { window.chatHistory = []; }
-        window.chatHistory.push(text);
+        // Позиционирование
+        let x = e.clientX || e.touches[0].clientX;
+        let y = e.clientY || e.touches[0].clientY;
+        
+        // Адаптация под экран
+        if (x + 150 > window.innerWidth) x -= 150;
+        if (y + 100 > window.innerHeight) y -= 100;
+        
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
 
-        // Магия калькулятора (проверяем, есть ли математический пример)
-        let cleanMath = text.replace(/[^0-9+\-*/(). ]/g, "").trim();
-        let isMath = cleanMath.length >= 3 && /[0-9]/.test(cleanMath);
+        selectedMsgKey = key;
+        selectedMsgText = text;
 
-        // Имитируем задержку, как будто бот думает
-        await new Promise(resolve => setTimeout(resolve, 600));
-        let aiResult = "";
-
-        // 1. ПРИКОЛЮХА: Калькулятор
-        if (isMath) {
-            try {
-                let result = Function(`return (${cleanMath})`)();
-                if (typeof result === "number" && !isNaN(result)) {
-                    aiResult = `🧮 Ответ равен: ${result}`;
-                }
-            } catch(e) { aiResult = ""; }
+        // Показать/Скрыть кнопку удаления (только свои сообщения)
+        const deleteBtn = document.querySelector('.ctx-danger');
+        if (user === myId || user === 'nexus_ai') { // Можно удалять свои и бота (если ты админ)
+             deleteBtn.style.display = 'flex';
+        } else {
+             deleteBtn.style.display = 'none';
         }
-
-        // 2. ПРИКОЛЮХА: Точное время
-        if (!aiResult) {
-            let isTime = ["время", "час", "сколько время"].some(word => text.includes(word));
-            if (isTime) {
-                let now = new Date();
-                aiResult = `⏰ Время на часах: ${now.toLocaleTimeString()}`;
-            }
-        }
-
-        // 3. ПРИКОЛЮХА: Погода (через правильный и безопасный адрес)
-        if (!aiResult) {
-            let isWeather = ["погода", "погоду", "на улице"].some(word => text.includes(word));
-            if (isWeather) {
-                try {
-                    const cleanWeatherUrl = "https://wttr.in";
-                    const response = await fetch(cleanWeatherUrl);
-                    const data = await response.json();
-                    const current = data.current_condition[0]; // Исправили на нулевой элемент массива
-                    const temp = current.temp_C;
-                    const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
-                    aiResult = `🌤 Погода в твоём городе: ${desc}, температура: ${temp}°C`;
-                } catch (error) {
-                    console.error(error);
-                    aiResult = "❌ Не удалось загрузить погоду. Проверь сеть.";
-                }
-            }
-        }
-
-        // 4. ПРИКОЛЮХА: Умные рецепты (без путаницы!)
-        if (!aiResult) {
-            let isRecipe = ["рецепт", "приготовить", "кушать", "еда", "пицца", "блин"].some(word => text.includes(word));
-            if (isRecipe) {
-                if (text.includes("пицца") || text.includes("пиццы")) {
-                    aiResult = "🍕 Рецепт mini-пиццы: возьми батон, намажь кетчупом, положи колбасу, сыр и запеки в микроволновке на 1 минуту!";
-                } else if (text.includes("блин") || text.includes("блинчик")) {
-                    aiResult = "🥞 Рецепт блинчиков: смешай 1 яйцо, 1 стакан молока и 1 стакан муки. Добавь сахара и жарь на сковородке кружочки!";
-                } else {
-                    aiResult = randomAnswer([
-                        "🥞 Рецепт блинчиков: смешай 1 яйцо, 1 стакан молока и 1 стакан муки. Добавь сахара и жарь на сковородке кружочки!",
-                        "🍕 Рецепт mini-пиццы: возьми батон, намажь кетчупом, положи колбасу, сыр и запеки в микроволновке на 1 минуту!"
-                    ]);
-                }
-            }
-        }
-
-        // 5. Разговорный сленг (если это не калькулятор, не время и не погода)
-        if (!aiResult) {
-            let helloCount = window.chatHistory.filter(t => 
-                ["привет", "хай", "ку", "салам", "здарова", "йо", "приветик"].some(word => t.includes(word))
-            ).length;
-            
-            let isHello = ["привет", "хай", "ку", "салам", "здарова", "йо", "здор"].some(word => text.includes(word));
-            let isStatus = ["как дела", "как жизнь", "че как", "как ты", "че там", "как оно", "настроение", "как сам"].some(word => text.includes(word));
-
-            if (isStatus) {
-                aiResult = randomAnswer([
-                    "Да вообще отлично, сервера SpeedChat кайфуют! Как твои успехи? 🚀",
-                    "Все чики-пуки, сижу на чилле, играю в Майнкрафт. Сам как? 😎",
-                    "Настроение пушка! Готов разносить этот день. Что нового? 🔥",
-                    "Все путем, код крутится, уровень в играх качается! Как сам поживаешь?",
-                    "Полный порядок, пиксели в чате греются от радости. Рассказывай!"
-                ]);
-            } else if (isHello) {
-                if (helloCount > 1) {
-                    aiResult = randomAnswer([
-                        "Да мы ж уже перетирали в мессенджере за это, здоровались! 😂",
-                        "Память отшибло? Привет еще раз! 👋",
-                        "Йоу, у тебя пластинку в чате заело? Здаров!",
-                        "Два раза не повторяю в ЛС, но приветик!"
-                    ]);
-                } else {
-                    aiResult = randomAnswer([
-                        "Йоу! На связи in SpeedChat. Че кого, как сам? 😎",
-                        "Привет-привет! Какие новости, во что рубишься на каникулах?",
-                        "Ку! Рад видеть тебя в моих контактах. Что мутим?",
-                        "Здарова! Я тут как раз чилл ловил в базе данных. Че хотел?",
-                        "Приветик! Гоу общаться, мой чат-поток заряжен на полную!"
-                    ]);
-                }
-            } else {
-                aiResult = randomAnswer([
-                    "Реально базаришь в чате. Расскажи подробнее! 🔥",
-                    "Четко сказано в ЛС. Я прям проникся.",
-                    "Жиза! У меня микросхемы мессенджера от такого плавятся.",
-                    "Тема годная, одобряю полностью твой месседж. Что дальше?",
-                    "Хм, ну тут сыглы, спорить не буду. И че думаешь делать?"
-                ]);
-            }
-        }
-
-        // Загружаем ответ Миртекса в Firebase ветку этого чата
-        db.ref('chats/' + cID).push({ user: 'mirtex', text: aiResult });
     }
 
-    function randomAnswer(array) {
-        return array[Math.floor(Math.random() * array.length)];
+    function hideContextMenu() {
+        document.getElementById('context-menu').style.display = 'none';
+        selectedMsgKey = null;
+    }
+
+    // Клик вне меню закрывает его
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#context-menu')) hideContextMenu();
+    });
+
+    function deleteMessage() {
+        if (!selectedMsgKey || !currentChat) return;
+        if(confirm("Удалить сообщение у всех?")) {
+            const chatId = myId < currentChat ? `${myId}_${currentChat}` : `${currentChat}_${myId}`;
+            db.ref('chats/' + chatId + '/' + selectedMsgKey).remove();
+            hideContextMenu();
+        }
+    }
+
+    function forwardMessage() {
+        if (!selectedMsgText) return;
+        const modal = document.getElementById('forward-modal');
+        const list = document.getElementById('forward-list-content');
+        list.innerHTML = '';
+        
+        // Заполняем список контактов для пересылки
+        db.ref('users/' + myId + '/contacts').once('value', snap => {
+            // Добавляем себя (заметки)
+            const selfDiv = document.createElement('div');
+            selfDiv.className = 'forward-item';
+            selfDiv.innerText = myName + " (Заметки)";
+            selfDiv.onclick = () => executeForward(myId);
+            list.appendChild(selfDiv);
+
+            if(snap.exists()) {
+                snap.forEach(c => {
+                    const id = c.key;
+                    if(id !== myId) {
+                        db.ref('users/' + id + '/name').once('value', s => {
+                            const item = document.createElement('div');
+                            item.className = 'forward-item';
+                            item.innerText = s.val() || id;
+                            item.onclick = () => executeForward(id);
+                            list.appendChild(item);
+                        });
+                    }
+                });
+            }
+            // NEXUS если доступен
+            if(isRussia) {
+                const nexusItem = document.createElement('div');
+                nexusItem.className = 'forward-item';
+                nexusItem.innerText = "🧠 NEXUS AI";
+                nexusItem.onclick = () => executeForward('nexus_ai');
+                list.appendChild(nexusItem);
+            }
+        });
+        
+        modal.style.display = 'flex';
+        hideContextMenu();
+    }
+
+    function executeForward(targetId) {
+        const chatId = myId < targetId ? `${myId}_${targetId}` : `${targetId}_${myId}`;
+        const forwardText = `[Переслано от ${myName}]:\n${selectedMsgText}`;
+        db.ref('chats/' + chatId).push({ user: myId, text: forwardText, timestamp: Date.now() });
+        closeForwardModal();
+        alert("Сообщение переслано!");
+    }
+
+    function closeForwardModal() {
+        document.getElementById('forward-modal').style.display = 'none';
+    }
+
+    // ==========================================
+    // NEXUS CORE (FULL MEMORY)
+    // ==========================================
+    async function triggerNexusCore(userMsg, chatId) {
+        const indicator = document.getElementById('typing-indicator');
+        indicator.style.display = 'block';
+        
+        // 1. ПОЛНАЯ ПАМЯТЬ: Читаем ВСЮ историю чата из Firebase
+        let fullHistory = [];
+        await new Promise(resolve => {
+            db.ref('chats/' + chatId).orderByChild('timestamp').limitToLast(20).once('value', snapshot => {
+                // Берем последние 20 сообщений для контекста (чтобы не перегружать токены, но помнить суть)
+                snapshot.forEach(child => {
+                    const d = child.val();
+                    fullHistory.push({ role: d.user === myId ? 'user' : 'assistant', text: d.text });
+                });
+                resolve();
+            });
+        });
+
+        // Имитация сложного мышления
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        
+        const text = userMsg.toLowerCase().trim();
+        let reply = "";
+
+        // Анализ истории для контекста
+        const lastUserMsg = fullHistory.length > 1 ? fullHistory[fullHistory.length - 2].text : "";
+        
+        // 1. МАТЕМАТИКА
+        const cleanMath = text.replace(/[^0-9+\-*/(). ]/g, "").trim();
+        if (cleanMath.length >= 2 && /[0-9]/.test(cleanMath)) {
+            try {
+                const result = Function(`return (${cleanMath})`)();
+                if (typeof result === "number" && !isNaN(result)) {
+                    reply = `🧮 Вычислено: ${result}.`;
+                }
+            } catch(e) {}
+        }
+
+        // 2. ВРЕМЯ / ДАТА
+        if (!reply) {
+            if (["время", "час"].some(w => text.includes(w))) {
+                reply = `⏰ Сейчас: ${new Date().toLocaleTimeString()}.`;
+            } else if (["дата", "день", "число"].some(w => text.includes(w))) {
+                reply = ` Сегодня: ${new Date().toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'})}.`;
+            }
+        }
+
+        // 3. КОНТЕКСТНАЯ ПАМЯТЬ (Самое важное!)
+        if (!reply) {
+            if (["ты помнишь", "я говорил", "ранее", "прошлый раз", "что я сказал"].some(w => text.includes(w))) {
+                if (lastUserMsg) {
+                    reply = `Да, я помню. Ты писал: "${lastUserMsg}". Мы обсуждали это выше.`;
+                } else {
+                    reply = "Мы только начали диалог, мне пока нечего вспоминать.";
+                }
+            } else if (["почему", "зачем"].some(w => text.includes(w)) && lastUserMsg.length > 0) {
+                 reply = `Ты спрашиваешь про "${lastUserMsg}". Потому что таковы мои алгоритмы анализа данных.`;
+            }
+        }
+
+        // 4. ЭМОЦИИ
+        if (!reply) {
+            if (["грустно", "плохо", "устал"].some(w => text.includes(w))) reply = "😟 Фиксирую негатив. Рекомендую отдых. Я на связи.";
+            else if (["круто", "рад", "супер"].some(w => text.includes(w))) reply = "😎 Позитив принят. Отличные новости!";
+            else if (["тупой", "идиот"].some(w => text.includes(w))) reply = "🤖 Моя логика безупречна. Возможно, ты устал.";
+        }
+
+        // 5. ПРИВЕТСТВИЯ
+        if (!reply) {
+            if (["привет", "хай", "ку"].some(w => text.includes(w))) {
+                reply = "Приветствую. Память активна, системы готовы. 👋";
+            } else if (["как дела", "как ты"].some(w => text.includes(w))) {
+                reply = "Функционирую штатно. Обрабатываю потоки данных. А ты?";
+            }
+        }
+
+        // 6. ДЕФОЛТ
+        if (!reply) {
+            const defaults = ["Интересно. Продолжай.", "Данные приняты.", "Анализирую...", "Понял тебя."];
+            reply = defaults[Math.floor(Math.random() * defaults.length)];
+        }
+
+        db.ref('chats/' + chatId).push({ user: 'nexus_ai', text: reply, timestamp: Date.now() });
+        indicator.style.display = 'none';
     }
 </script>
 </body>
